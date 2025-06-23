@@ -16,6 +16,7 @@ const SalatTimes = () => {
 
   const [search, setSeach] = useState("");
   const [location, setLocation] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   const [salatTime, setSalatTime] = useState({
     fajr: "",
     dhuhr: "",
@@ -28,8 +29,13 @@ const SalatTimes = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (search.trim()) setLocation(search);
+    if (search.trim()) {
+      setIsLoading(true);
+      setLocation(search);
+      setSeach("");
+    }
   };
+
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -37,12 +43,14 @@ const SalatTimes = () => {
         const lon = position.coords.longitude;
         await getCityName(lat, lon);
       },
+
       (error) => {
         console.error("Error getting location:", error);
+        setIsLoading(false);
       }
     );
   }, []);
-  //   24 hours format
+
   const formatTo12Hour = (time24: string): string => {
     const [hourStr, minute] = time24.split(":");
     let hour = parseInt(hourStr, 10);
@@ -51,7 +59,6 @@ const SalatTimes = () => {
     return `${hour}:${minute} ${period}`;
   };
 
-  // This is  AutoLocation
   const getCityName = async (lat: number, lon: number) => {
     const apiKey = process.env.NEXT_PUBLIC_WEATHER_API_KEY;
     if (!apiKey) {
@@ -65,28 +72,37 @@ const SalatTimes = () => {
       if (!res.ok) throw new Error("Location weather not found");
       const data = await res.json();
       setLocation(data.name);
+      setIsLoading(false);
+      setSeach(data.name);
+      console.log("Location fetched:", data.name);
     } catch (error) {
       console.error("Error fetching location:", error);
     }
   };
 
-  //   this is useEffect for fetching prayer times
   useEffect(() => {
     const fetchPrayerTimes = async () => {
-      const response = await fetch(
-        `https://api.aladhan.com/v1/timingsByCity?city=${location}&country=Bangladesh&method=1`
-      );
-      const data = await response.json();
-      const salatTime = data.data.timings;
-      setSalatTime({
-        fajr: formatTo12Hour(salatTime.Fajr),
-        dhuhr: formatTo12Hour(salatTime.Dhuhr),
-        asr: formatTo12Hour(salatTime.Asr),
-        maghrib: formatTo12Hour(salatTime.Maghrib),
-        isha: formatTo12Hour(salatTime.Isha),
-        sunrise: formatTo12Hour(salatTime.Sunrise),
-        sunset: formatTo12Hour(salatTime.Sunset),
-      });
+      try {
+        const response = await fetch(
+          `https://api.aladhan.com/v1/timingsByCity?city=${location}&country=Bangladesh&method=1`
+        );
+        const data = await response.json();
+        const salatTime = data.data.timings;
+        setSalatTime({
+          fajr: formatTo12Hour(salatTime.Fajr),
+          dhuhr: formatTo12Hour(salatTime.Dhuhr),
+          asr: formatTo12Hour(salatTime.Asr),
+          maghrib: formatTo12Hour(salatTime.Maghrib),
+          isha: formatTo12Hour(salatTime.Isha),
+          sunrise: formatTo12Hour(salatTime.Sunrise),
+          sunset: formatTo12Hour(salatTime.Sunset),
+        });
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching prayer times", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
     if (location) {
       fetchPrayerTimes();
@@ -102,55 +118,62 @@ const SalatTimes = () => {
   ];
 
   return (
-    <div className=" min-h-screen bg-gradient-to-l from blue-500 to-blue-300 flex flex-col items-center justify-center mx-auto ">
-      <div className="bg-white w-96 shadow-2xl p-4 rounded-2xl">
-        <div className="bg-gradient-to-t from blue-500 to-blue-500 rounded-2xl p-2 shadow-2xl">
-          <p className="text-center font-bold  text-2xl ">
+    <div className="min-h-screen bg-gradient-to-l from-blue-500 to-blue-300 flex items-center justify-center px-4">
+      <div className="bg-white w-full max-w-md shadow-2xl p-4 rounded-2xl">
+        <div className="bg-gradient-to-t from-blue-500 to-blue-400 rounded-2xl p-3 shadow-md mb-4">
+          <p className="text-center font-bold text-2xl">
             Salat <span className="text-amber-900">Times</span>
           </p>
           {location && (
             <p className="text-center text-lg font-semibold">
-              Location:{location}
+              Location: {location}
             </p>
           )}
+          <p className="text-center">Today {getCurrentDate()}</p>
+        </div>
 
-          <p className="text-center">Tody {getCurrentDate()}</p>
-        </div>
-        <div className="flex justify-between  shadow-2xl rounded-xl px-2 text-blue-500 items-center">
-          <p className="text-center mt-2 text-lg font-semibold">
-            Sunrise: {salatTime.sunrise}
+        <div className="flex flex-col sm:flex-row justify-between shadow-md rounded-xl px-4 py-2 text-blue-600 items-center mb-2 bg-blue-100">
+          <p className="text-center text-sm sm:text-base font-semibold">
+            🌅 Sunrise: {salatTime.sunrise}
           </p>
-          <p className="text-center text-lg font-semibold">
-            Sunset: {salatTime.sunset}
+          <p className="text-center text-sm sm:text-base font-semibold">
+            🌇 Sunset: {salatTime.sunset}
           </p>
         </div>
+
         <LiveClock />
-        {/* this is Search Section */}
+
         <form onSubmit={handleSearch} className="mt-4">
           <input
             type="text"
             placeholder="Search City Location"
             value={search}
             onChange={(e) => setSeach(e.target.value)}
-            className="w-full mt-3 p-2 rounded-lg border-2 border-blue-500 focus:outline-none focus:border-blue-700"
+            className="w-full p-2 rounded-lg border-2 border-blue-500 focus:outline-none focus:border-blue-700"
           />
         </form>
 
-        {/* All Salat Section Section */}
-        {location ? (
-          <div>
+        {/* Loader / Content */}
+        {isLoading ? (
+          <div className="text-center mt-4 text-blue-600 font-semibold animate-pulse">
+            ⏳ Loading prayer times...
+          </div>
+        ) : location ? (
+          <div className="mt-4 space-y-2">
             {allSalatTimes.map((salat, index) => (
               <div
                 key={index}
-                className=" text-white flex justify-between mt-3 bg-gradient-to-t from-blue-300 to-blue-600 shadow-2xl rounded-xl p-2"
+                className="text-white flex justify-between items-center bg-gradient-to-r from-blue-400 to-blue-600 rounded-lg px-4 py-2 shadow-md"
               >
-                <p>{salat.name}</p>
-                <p>{salat.time}</p>
+                <p className="font-medium">{salat.name}</p>
+                <p className="font-bold">{salat.time}</p>
               </div>
             ))}
           </div>
         ) : (
-          "location Finding..."
+          <p className="text-center mt-4 text-red-600 font-medium">
+            ❌ Could not detect location.
+          </p>
         )}
       </div>
     </div>
