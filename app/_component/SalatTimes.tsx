@@ -131,23 +131,21 @@ const SalatTimes = () => {
           )}
           <p className="text-center">Today {getCurrentDate()}</p>
         </div>
-
-        <div className="flex flex-col sm:flex-row justify-between shadow-md rounded-xl px-4 py-2 text-blue-600 items-center mb-2 bg-blue-100">
-          <p className="text-center text-sm sm:text-base font-semibold">
-            🌅 Sunrise: {salatTime.sunrise}
-          </p>
-          <p className="text-center text-sm sm:text-base font-semibold">
-            🌇 Sunset: {salatTime.sunset}
-          </p>
-        </div>
-
+        {location && (
+          <div className="flex flex-col sm:flex-row justify-between shadow-md rounded-xl px-4 py-2 text-blue-600 items-center mb-2 bg-blue-100">
+            <p className="text-center text-sm sm:text-base font-semibold">
+              🌅 Sunrise: {salatTime.sunrise}
+            </p>
+            <p className="text-center text-sm sm:text-base font-semibold">
+              🌇 Sunset: {salatTime.sunset}
+            </p>
+          </div>
+        )}
         <LiveClock />
-
         <form onSubmit={handleSearch} className="mt-4">
           <input
             type="text"
             placeholder="Search City Location"
-            value={search}
             onChange={(e) => setSeach(e.target.value)}
             className="w-full p-2 rounded-lg border-2 border-blue-500 focus:outline-none focus:border-blue-700"
           />
